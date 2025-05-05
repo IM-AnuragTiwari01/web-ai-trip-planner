@@ -5,8 +5,11 @@ import PlaceAutocomplete from '../components/ui/PlaceAutocomplete';
 import { Input } from '../components/ui/input';
 import { SelectBudgetOptions, SelectTravelesList } from '../constants/options';
 import { Button} from '../components/ui/button';
+import { GoogleGenerativeAI } from '@google/generative-ai'; 
 
 import { toast, Toaster } from "sonner"
+import { AI_PROMPT_TEMPLATE } from '../components/service/AIMODEL';
+// import { chatSession } from '@google/generative-ai';
 
 function CreateTrip() {
   const [place, setPlace] = useState();
@@ -24,14 +27,34 @@ function CreateTrip() {
     console.log(formData);
   },[formData])
 
-  const OnGenerateTrip=()=>{
-    if(formData?.noOfDays>5 && !formData?.location || !formData?.budget || !formData?.traveller)
-    {
-      toast("Please fill in the details !")
+  const OnGenerateTrip = async () => {
+    if ((formData?.noOfDays > 5 && !formData?.location) || !formData?.budget || !formData?.traveller) {
+      toast("Please fill in the details !");
       return;
     }
-    console.log(formData);
-  }
+  
+    const FINAL_PROMPT = AI_PROMPT_TEMPLATE
+      .replace('{location}', formData?.location?.display_name)
+      .replace('{totalDays}', formData?.noOfDays)
+      .replace('{traveller}', formData?.traveller)
+      .replace('{budget}', formData?.budget)
+      .replace('{totalDays}', formData?.noOfDays);
+  
+    console.log(FINAL_PROMPT);
+  
+    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_GEMINI_API_KEY);
+ // Replace with your API key
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  
+    const chat = model.startChat();
+  
+    const result = await chat.sendMessage(FINAL_PROMPT);
+    const response = await result.response;
+    const text = await response.text();
+  
+    console.log(text);
+  };
+  
 
   return (
     <div className='sm:px-10 md:px-32 lg:px-56 xl:px-10 px-5 mt-10 flex items-center flex-col'>

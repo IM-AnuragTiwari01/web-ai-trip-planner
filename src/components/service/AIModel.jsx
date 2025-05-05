@@ -1,18 +1,298 @@
-// import { GoogleGenAI } from "@google/genai";
+import {
+    GoogleGenerativeAI,
+    HarmCategory,
+    HarmBlockThreshold,
+} from "@google/generative-ai";
 
-// const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GOOGLE_GEMINI_API_KEY });
+// --- SECURITY WARNING REMAINS ---
+// This approach still exposes the API key if run directly in the browser.
+// Use a backend server for production deployment.
+const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
 
-// async function main() {
-//   const response = await ai.models.generateContent({
-//     model: "gemini-2.0-flash",
-//     contents: "Explain how AI works in a few words",
-//   });
-//   console.log(response.text);
-// }
+if (!apiKey) {
+    throw new Error("VITE_GOOGLE_GEMINI_API_KEY is not set in the environment.");
+}
 
-// await main();
-//--------------------------------------
+const genAI = new GoogleGenerativeAI(apiKey);
 
+const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+});
 
+const generationConfig = {
+    temperature: 0.8,
+    topP: 0.95,
+    topK: 64,
+    maxOutputTokens: 8192,
+    // responseMimeType: "application/json", // Keep this if you primarily expect JSON
+};
 
-// problem integating the LLM
+const safetySettings = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+];
+
+// --- PROMPT TEMPLATE (Still useful for the initial message) ---
+export const AI_PROMPT_TEMPLATE = `
+Generate Travel Plan for Location: {location}, for {totalDays} Days for {traveler} with a {budget} budget.
+
+Give me a Hotels options list with:
+- HotelName (string)
+- Hotel address (string)
+- price (string, e.g., "$", "$$", "$$$")
+- hotel image url (string)
+- geo coordinates (object with latitude: number, longitude: number)
+- rating (number)
+- descriptions (string)
+
+And suggest an itinerary with:
+- placeName (string)
+- place details (string)
+- place Image url (string)
+- geo coordinates (object with latitude: number, longitude: number)
+- ticket pricing (string)
+- time travel (string, estimated travel time)
+- best time to visit (string)
+
+Structure the entire response as a single JSON object with a root key "travelPlan". Ensure all keys and string values are enclosed in double quotes.
+Example structure:
+{
+  "travelPlan": {
+    "location": "{location}",
+    "duration": "{totalDays} Days",
+    "travelerType": "{traveler}",
+    "budget": "{budget}",
+    "hotelOptions": [ { "hotelName": "...", ... } ],
+    "itinerary": [ { "day": 1, "theme": "...", "activities": [ { "placeName": "...", ... } ] } ]
+  }
+}
+Respond only with the JSON object for this initial request. Subsequent responses might be conversational.
+`;
+
+/**
+ * Helper function to replace placeholders in the template string.
+ */
+function fillPromptTemplate(template, values) {
+  let filledPrompt = template;
+  for (const key in values) {
+    const regex = new RegExp(`\\{${key}\\}`, 'g');
+    filledPrompt = filledPrompt.replace(regex, values[key]);
+  }
+  return filledPrompt;
+}
+
+// --- NEW FUNCTIONS USING ChatSession ---
+
+/**
+ * Starts a new chat session and sends the initial travel plan request.
+ * IMPORTANT: This function returns the session object AND the first response.
+ * The calling component MUST store the session object to send further messages.
+ *
+ * @param {string} location - The travel destination.
+ * @param {string | number} totalDays - The duration of the trip in days.
+ * @param {string} traveler - The type of traveler (e.g., "Couple", "Solo", "Family").
+ * @param {string} budget - The budget level (e.g., "Cheap", "Moderate", "Luxury").
+ * @returns {Promise<{ chatSession: any, initialResponseText: string }>} A promise that resolves to an object containing the chat session and the text of the first response.
+ * @throws {Error} Throws an error if the API call fails.
+ */
+export async function startTravelPlanChat(location, totalDays, traveler, budget) {
+    console.log("Starting new travel plan chat...");
+
+    // Start a new chat session
+    const chatSession = model.startChat({
+        generationConfig,
+        safetySettings,
+        // history: [] // Start with empty history, we'll send the first message
+    });
+
+    // Prepare the initial detailed prompt
+    const values = { location, totalDays, traveler, budget };
+    const initialPrompt = fillPromptTemplate(AI_PROMPT_TEMPLATE, values);
+
+    console.log("Sending initial prompt to Gemini:", initialPrompt);
+
+    try {
+        // Send the initial prompt to get the plan
+        const result = await chatSession.sendMessage(initialPrompt);
+        const response = result.response;
+
+        if (!response) {
+            throw new Error("No initial response received from the API.");
+        }
+
+        const initialResponseText = response.text();
+        console.log("Raw initial response text:", initialResponseText);
+
+        // Return BOTH the session (for future messages) and the first response
+        return { chatSession, initialResponseText };
+
+    } catch (error) {
+        console.error("Error starting chat or sending initial message:", error);
+        throw new Error(`Failed to start travel plan chat: ${error.message}`);
+    }
+}
+
+/**
+ * Sends a follow-up message to an existing chat session.
+ *
+ * @param {any} chatSession - The active chat session object (obtained from startTravelPlanChat).
+ * @param {string} message - The user's follow-up message.
+ * @returns {Promise<string>} A promise that resolves to the text of the AI's response.
+ * @throws {Error} Throws an error if the API call fails or chatSession is invalid.
+ */
+export async function sendChatMessage(chatSession, message) {
+    if (!chatSession || typeof chatSession.sendMessage !== 'function') {
+        console.error("Invalid chatSession object passed to sendChatMessage.");
+        throw new Error("Invalid chat session provided.");
+    }
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+         console.warn("Attempted to send an empty message.");
+         return ""; // Or throw an error if empty messages aren't allowed
+    }
+
+    console.log("Sending follow-up message:", message);
+
+    try {
+        const result = await chatSession.sendMessage(message);
+        const response = result.response;
+
+        if (!response) {
+            throw new Error("No response received for follow-up message.");
+        }
+
+        const responseText = response.text();
+        console.log("Raw follow-up response text:", responseText);
+        return responseText;
+
+    } catch (error) {
+        console.error("Error sending follow-up message:", error);
+        throw new Error(`Failed to send message: ${error.message}`);
+    }
+}
+
+// --- Example React Component Usage (Conceptual) ---
+/*
+import React, { useState, useCallback } from 'react';
+import { startTravelPlanChat, sendChatMessage } from './path/to/your/aiService'; // Adjust path
+
+function TravelChatComponent() {
+  // State for the component
+  const [location, setLocation] = useState('');
+  const [days, setDays] = useState('');
+  // ... other form states: traveler, budget
+  const [chatSession, setChatSession] = useState(null); // <-- Store the session object here
+  const [messages, setMessages] = useState([]); // Store conversation history { role: 'user'/'model', text: '...' }
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Function to handle the initial form submission
+  const handleInitialSubmit = useCallback(async (event) => {
+    event.preventDefault();
+    if (!location || !days /* || !traveler || !budget * /) {
+      setError("Please fill in all initial details.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setMessages([]); // Clear previous conversation
+    setChatSession(null); // Clear previous session
+
+    try {
+      // --- Call the function to start the chat ---
+      const { chatSession: newSession, initialResponseText } = await startTravelPlanChat(
+        location,
+        days,
+        'Couple', // Replace with state variable
+        'Cheap'   // Replace with state variable
+      );
+
+      // --- Store the session object in state ---
+      setChatSession(newSession);
+
+      // --- Update message history ---
+      // Optional: Add the complex prompt used, or just the response
+      // setMessages([{ role: 'user', text: 'Generate plan request...' }]); // Simplified user message
+      setMessages([{ role: 'model', text: initialResponseText }]); // Add AI's first response
+
+    } catch (err) {
+      setError(err.message || "Failed to start chat.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [location, days /*, traveler, budget* /]);
+
+  // Function to handle sending follow-up messages
+  const handleSendMessage = useCallback(async (event) => {
+    event.preventDefault();
+    if (!currentMessage.trim() || !chatSession || isLoading) {
+      return; // Don't send empty messages or if busy/no session
+    }
+
+    const userMessage = currentMessage;
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]); // Add user message optimistically
+    setCurrentMessage(''); // Clear input
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // --- Call the function to send a message using the stored session ---
+      const responseText = await sendChatMessage(chatSession, userMessage);
+
+      // --- Add AI response to history ---
+      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
+
+    } catch (err) {
+      setError(err.message || "Failed to send message.");
+      console.error(err);
+      // Optional: Remove the optimistic user message if sending failed
+      setMessages(prev => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [chatSession, currentMessage, isLoading]);
+
+  return (
+    <div>
+      {/* Initial Form * /}
+      {!chatSession && (
+        <form onSubmit={handleInitialSubmit}>
+          {/* Input fields for location, days, traveler, budget * /}
+          <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
+          <input type="number" value={days} onChange={e => setDays(e.target.value)} placeholder="Days" />
+          {/* ... other inputs ... * /}
+          <button type="submit" disabled={isLoading}>Generate Initial Plan</button>
+        </form>
+      )}
+
+      {/* Chat Display * /}
+      <div>
+        {messages.map((msg, index) => (
+          <p key={index}><strong>{msg.role}:</strong> {msg.text}</p>
+        ))}
+      </div>
+
+      {/* Follow-up Message Input * /}
+      {chatSession && (
+        <form onSubmit={handleSendMessage}>
+          <input
+            type="text"
+            value={currentMessage}
+            onChange={e => setCurrentMessage(e.target.value)}
+            placeholder="Ask for modifications or details..."
+            disabled={isLoading}
+          />
+          <button type="submit" disabled={isLoading || !currentMessage.trim()}>Send</button>
+        </form>
+      )}
+
+      {/* Loading and Error Indicators * /}
+      {isLoading && <p>Loading...</p>}
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+    </div>
+  );
+}
+*/
