@@ -6,15 +6,27 @@ import { Input } from '../components/ui/input';
 import { SelectBudgetOptions, SelectTravelesList } from '../constants/options';
 import { Button} from '../components/ui/button';
 import { GoogleGenerativeAI } from '@google/generative-ai'; 
+import { FcGoogle } from "react-icons/fc";
 
 import { toast, Toaster } from "sonner"
 import { AI_PROMPT_TEMPLATE } from '../components/service/AIMODEL';
 // import { chatSession } from '@google/generative-ai';
+import axios from 'axios'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useGoogleLogin } from '@react-oauth/google';
+
 
 function CreateTrip() {
   const [place, setPlace] = useState();
   const [formData, setFormData] = useState([]);
-
+  const [openDialog,setOpenDialog] = useState(false);
   const handleInputChange = (name, value)=>{
     
     setFormData({
@@ -27,7 +39,24 @@ function CreateTrip() {
     console.log(formData);
   },[formData])
 
+  const login = useGoogleLogin({
+    onSuccess:(codeResp)=>GetUserProfile(codeResp),
+    onError:(error)=>console.log(error)
+  })
+
+
   const OnGenerateTrip = async () => {
+
+
+
+     const user = localStorage.getItem('user');
+
+     if(!user){
+      setOpenDialog(true)
+      return;
+     }
+
+
     if ((formData?.noOfDays > 5 && !formData?.location) || !formData?.budget || !formData?.traveller) {
       toast("Please fill in the details !");
       return;
@@ -54,6 +83,22 @@ function CreateTrip() {
   
     console.log(text);
   };
+
+
+
+  const GetUserProfile =(tokenInfo)=>{
+    axios.get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`,{
+      headers:{
+        Authorization:`Bearer ${tokenInfo?.access_token}`,
+        Accept:'Application/json'
+      }
+    }).then((resp)=>{
+      console.log(resp);
+      localStorage.setItem('user',JSON.stringify(resp.data));
+      setOpenDialog(false);
+      OnGenerateTrip();
+    })
+  }
   
 
   return (
@@ -126,9 +171,36 @@ function CreateTrip() {
             <div className='my-10 justify-end'>
             <Button onClick={OnGenerateTrip}>Generate Trip</Button>
             </div>
-              
+
+            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+
+  
+  <DialogContent>
+    <DialogHeader>
+      
+      <DialogDescription>
+        <img src ="/logo.svg" />
+        <h2 className='font-bold text-lg mt-7'>Sign In with Google</h2>
+        <p>Sign in to the app with Google authentication securely</p>
+        <Button
+          onClick={login}
+        className='mt-5 w-full flex gap-4 items-center'>
+        <FcGoogle className='h-7 w-7'/>
+          Sign In With Google</Button>
+      </DialogDescription>
+    </DialogHeader>
+  </DialogContent>
+</Dialog>
+
+
+
+
+
 
     </div>
+
+
+
   );
 }
 
