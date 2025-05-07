@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useGoogleLogin } from '@react-oauth/google';
+import { useNavigate} from 'react-router-dom';
 
 
 function CreateTrip() {
@@ -31,7 +32,7 @@ function CreateTrip() {
   const [formData, setFormData] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false)
-
+  const navigate = useNavigate();
 
 
   const handleInputChange = (name, value) => {
@@ -131,6 +132,11 @@ function CreateTrip() {
     }
   
     setLoading(false);
+    
+    navigate('/view-trip/' + docId)
+
+    
+
   };
   
 

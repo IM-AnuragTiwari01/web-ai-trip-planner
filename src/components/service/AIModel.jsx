@@ -24,7 +24,6 @@ const generationConfig = {
     topP: 0.95,
     topK: 64,
     maxOutputTokens: 8192,
-    // responseMimeType: "application/json", // Keep this if you primarily expect JSON
 };
 
 const safetySettings = [
@@ -34,14 +33,15 @@ const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
 ];
 
-// --- PROMPT TEMPLATE (Still useful for the initial message) ---
+// --- Updated PROMPT TEMPLATE ---
+// Requesting explicit pricing (e.g., "$100 per night")
 export const AI_PROMPT_TEMPLATE = `
 Generate Travel Plan for Location: {location}, for {totalDays} Days for {traveler} with a {budget} budget.
 
-Give me a Hotels options list with:
+Give me a list of {hotelCount} hotel options with:
 - HotelName (string)
 - Hotel address (string)
-- price (string, e.g., "$", "$$", "$$$")
+- price per night in USD (string, e.g., "$100", "$150", "$200", etc.)
 - hotel image url (string)
 - geo coordinates (object with latitude: number, longitude: number)
 - rating (number)
@@ -94,21 +94,21 @@ function fillPromptTemplate(template, values) {
  * @param {string | number} totalDays - The duration of the trip in days.
  * @param {string} traveler - The type of traveler (e.g., "Couple", "Solo", "Family").
  * @param {string} budget - The budget level (e.g., "Cheap", "Moderate", "Luxury").
- * @returns {Promise<{ chatSession: any, initialResponseText: string }>} A promise that resolves to an object containing the chat session and the text of the first response.
+ * @param {number} hotelCount - Number of hotels to return.
+ * @returns {Promise<{ chatSession: any, initialResponseText: string }>} A promise that resolves to the chat session and the first response.
  * @throws {Error} Throws an error if the API call fails.
  */
-export async function startTravelPlanChat(location, totalDays, traveler, budget) {
+export async function startTravelPlanChat(location, totalDays, traveler, budget, hotelCount = 5) {
     console.log("Starting new travel plan chat...");
 
     // Start a new chat session
     const chatSession = model.startChat({
         generationConfig,
         safetySettings,
-        // history: [] // Start with empty history, we'll send the first message
     });
 
-    // Prepare the initial detailed prompt
-    const values = { location, totalDays, traveler, budget };
+    // Prepare the initial detailed prompt with hotelCount
+    const values = { location, totalDays, traveler, budget, hotelCount };
     const initialPrompt = fillPromptTemplate(AI_PROMPT_TEMPLATE, values);
 
     console.log("Sending initial prompt to Gemini:", initialPrompt);
@@ -148,8 +148,8 @@ export async function sendChatMessage(chatSession, message) {
         throw new Error("Invalid chat session provided.");
     }
     if (!message || typeof message !== 'string' || message.trim() === '') {
-         console.warn("Attempted to send an empty message.");
-         return ""; // Or throw an error if empty messages aren't allowed
+        console.warn("Attempted to send an empty message.");
+        return ""; // Or throw an error if empty messages aren't allowed
     }
 
     console.log("Sending follow-up message:", message);
@@ -171,4 +171,3 @@ export async function sendChatMessage(chatSession, message) {
         throw new Error(`Failed to send message: ${error.message}`);
     }
 }
-
