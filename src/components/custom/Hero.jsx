@@ -9,7 +9,7 @@ function Hero() {
        ><span className='text-[#68a9dc]'>Your next adventure starts here</span><br />Effortless plans, unforgettable journeys</h1>
        <p className='text-xl text-gray-500 text-center'>Your personel trip planner and travel, creating custom itenaries tailored to your intrests and budget. </p>
        
-        <img src='/landing.jpg' className='' />
+        <img src='/landing.jpeg' className='p-10 shadow-2xl' />
 
        <Link to={'create-trip'}>
         <Button>Get Started It's Free</Button>

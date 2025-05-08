@@ -5,6 +5,7 @@ import { db } from '../../components/service/firebaseConfig';
 import { toast } from 'sonner';
 import InfoSection from './components/InfoSection';
 import Hotels from './components/Hotels';
+import PlacesToVisit from './components/PlacesToVisit';
 
 
 function Viewtrip() {
@@ -45,7 +46,7 @@ useEffect(()=>{
 
 
       {/* {Daily plan} */}
-
+      <PlacesToVisit trip ={trip}/>
 
 
       {/* {footer} */}

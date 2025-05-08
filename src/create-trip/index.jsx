@@ -9,7 +9,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FcGoogle } from "react-icons/fc";
 import { doc, setDoc } from "firebase/firestore";
 import { toast, Toaster } from "sonner"
-import { AI_PROMPT_TEMPLATE } from '../components/service/AIMODEL';
+import { AI_PROMPT_TEMPLATE } from '../components/service/AIModel';
 import { db } from '../components/service/firebaseConfig'
 import axios from 'axios'
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -231,7 +231,7 @@ function CreateTrip() {
 
           onClick={OnGenerateTrip}>
           {loading ?
-            <AiOutlineLoading3Quarters className='h-7 w-7 animate-spin' /> : 'Generate Trip '
+            <AiOutlineLoading3Quarters className='h-7 w-7 animate-spin' /> : 'Generate Trips'
           }
 
           Generate Trip</Button>

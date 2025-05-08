@@ -38,10 +38,10 @@ const safetySettings = [
 export const AI_PROMPT_TEMPLATE = `
 Generate Travel Plan for Location: {location}, for {totalDays} Days for {traveler} with a {budget} budget.
 
-Give me a list of {hotelCount} hotel options with:
-- HotelName (string)
-- Hotel address (string)
-- price per night in USD (string, e.g., "$100", "$150", "$200", etc.)
+Give me a list of {hotelCount} hotel options with: (give atleast 6 hotels and maximum 8)
+- hotelName (string)
+- hotelAddress (string)
+- pricePerNightInUSD (string, e.g., "$100", "$150", "$200", etc.) 
 - hotel image url (string)
 - geo coordinates (object with latitude: number, longitude: number)
 - rating (number)
