@@ -11,15 +11,15 @@ function Hotels({ trip }) {
                     <div className='hover:scale-105 transition-all cursor-pointer'>
                         <img src="/hotels.jpg" className='rounded-xl' />
                         <div className='my-3'>
-                            <h2 className='font-medium'>{hotel?.HotelName}</h2>
+                            <h2 className='font-medium'>{hotel?.hotelName}</h2>
                             {hotel['Hotel address'] && (
                                 <h2 className='text-xs text-gray-500'>📌{hotel['Hotel address']}</h2>
                             )}
 
                             {hotel['price per night in USD'] && (
-                                <h2 className='text-sm'>💰{hotel['price per night in USD']}</h2>
+                                <h2 className='text-sm'>💰{hotel['price per night in USD']} per night </h2>
                             )}
-                            <h2 className='text-sm'>⭐{hotel?.rating} per night</h2>
+                            <h2 className='text-sm'>⭐{hotel?.rating} </h2>
 
                         </div>
                     </div>
