@@ -67,8 +67,9 @@ function PlaceCardItem({ place }) {
         
         <div>
           <h2 className='font-bold text-lg'>- {place.placeName}</h2>
-          <p className='text-sm text-gray-400'>{place['place details']}</p>
-          <h2 className='font-bold text-blue-300 text-sm'>Ticket pricing: {place['ticket pricing']}</h2>
+          <p className='text-sm text-gray-400 mt-2'>- {place['placeDetails']}</p>
+          <p className='text-sm text-orange-400 mt-2'>- {place['bestTimeToVisit']} is the best time to visit</p>
+          <h2 className='font-bold text-blue-300 text-sm mt-2'>- Ticket pricing: {place['ticketPricing']}</h2>
         </div>
       </div>
     </a>
