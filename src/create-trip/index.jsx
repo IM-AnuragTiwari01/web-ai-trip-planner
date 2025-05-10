@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import PlaceAutocomplete from '../components/ui/PlaceAutocomplete';
 import { Input } from '../components/ui/input';
-import { SelectBudgetOptions, SelectTravelesList } from '../constants/options';
+import { SelectBudgetOptions, SelectTravelesList } from '../constants/option';
 import { Button } from '../components/ui/button';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FcGoogle } from "react-icons/fc";
