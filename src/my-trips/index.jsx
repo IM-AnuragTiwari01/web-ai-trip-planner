@@ -9,10 +9,10 @@ function MyTrips() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getUserTrips();
+    GetUserTrips();
   }, []);
 
-  const getUserTrips = async () => {
+  const GetUserTrips = async () => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user) {
       navigate("/");
