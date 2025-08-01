@@ -1,42 +1,27 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button'
-import { FcGoogle } from "react-icons/fc";
-import axios from 'axios'
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { googleLogout, useGoogleLogin } from '@react-oauth/google'
 import { Link } from 'react-router-dom'
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader } from "@/components/ui/dialog"
 
 function Header() {
   const [openDialog, setOpenDialog] = useState(false);
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
 
-  const login = useGoogleLogin({
-    onSuccess: (codeResp) => GetUserProfile(codeResp),
-    onError: (error) => console.log(error)
-  });
-
-  const GetUserProfile = (tokenInfo) => {
-    axios.get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`, {
-      headers: {
-        Authorization: `Bearer ${tokenInfo?.access_token}`,
-        Accept: 'Application/json'
-      }
-    }).then((resp) => {
-      console.log(resp);
-      localStorage.setItem('user', JSON.stringify(resp.data));
-      setUser(resp.data); // Update state with the new user data
-      setOpenDialog(false);
-    }).catch((err) => {
-      console.error("Failed to fetch user profile", err);
-      // Optionally show a user-friendly message
-    });
+  // Dummy login function (can be replaced with actual auth or removed entirely)
+  const handleDummyLogin = () => {
+    const dummyUser = {
+      name: 'Guest User',
+      picture: '/avatar-placeholder.png',
+    };
+    localStorage.setItem('user', JSON.stringify(dummyUser));
+    setUser(dummyUser);
+    setOpenDialog(false);
   };
 
   const handleLogout = () => {
-    googleLogout();
     localStorage.clear();
-    setUser(null); // Clear user from state
+    setUser(null);
   };
 
   return (
@@ -70,11 +55,10 @@ function Header() {
           <DialogHeader>
             <DialogDescription>
               <img src="/logo.svg" />
-              <h2 className='font-bold text-lg mt-7'>Sign In with Google</h2>
-              <p>Sign in to the app with Google authentication securely</p>
-              <Button onClick={login} className='mt-5 w-full flex gap-4 items-center'>
-                <FcGoogle className='h-7 w-7' />
-                Sign In With Google
+              <h2 className='font-bold text-lg mt-7'>Sign In</h2>
+              <p>Currently, login is disabled. Click below to continue as guest.</p>
+              <Button onClick={handleDummyLogin} className='mt-5 w-full flex gap-4 items-center'>
+                Continue as Guest
               </Button>
             </DialogDescription>
           </DialogHeader>
